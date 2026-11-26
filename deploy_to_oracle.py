@@ -116,39 +116,29 @@ def main():
         else:
             print("      가상환경 및 패키지 설치 완료.")
 
-        # 5. Configure Crontab (New York 16:05 / Monday-Friday)
-        print("\n[5/5] Crontab 스케줄러 등록 중 (미국 시장 마감 5분 후)...")
-        cron_line = f"CRON_TZ=America/New_York\n5 16 * * 1-5 {REMOTE_DIR}/run_oracle.sh >> {REMOTE_DIR}/execution.log 2>&1"
+        # 5. Configure Crontab (KST 05:05 & 06:05 / Monday-Saturday with NY 16:xx DST guard)
+        print("\n[5/5] Crontab 스케줄러 등록 중 (미국 시장 마감 5분 후: 비서머타임 06:05 / 서머타임 05:05)...")
+        cron_entry = f"5 5,6 * * 1-6 {REMOTE_DIR}/run_oracle.sh --cron"
         
         # Read existing crontab
         res_cron_read = run_ssh("crontab -l 2>/dev/null || true")
         existing_cron = res_cron_read.stdout.strip()
         
         new_cron_lines = []
-        has_cron_tz = False
-        has_morningwatch = False
-
         for line in existing_cron.splitlines():
-            if "CRON_TZ=America/New_York" in line:
-                has_cron_tz = True
+            # Clean up old CRON_TZ or old morningwatch entries
+            if line.startswith("CRON_TZ="):
+                continue
             if "run_oracle.sh" in line or "MorningWatch" in line:
-                has_morningwatch = True
-                continue  # will replace with latest
+                continue
             new_cron_lines.append(line)
 
-        # Rebuild crontab
-        final_cron = []
-        if not has_cron_tz:
-            final_cron.append("CRON_TZ=America/New_York")
-        for line in new_cron_lines:
-            final_cron.append(line)
-        final_cron.append(f"5 16 * * 1-5 {REMOTE_DIR}/run_oracle.sh >> {REMOTE_DIR}/execution.log 2>&1")
-
-        crontab_content = "\n".join(final_cron) + "\n"
+        new_cron_lines.append(cron_entry)
+        crontab_content = "\n".join(new_cron_lines) + "\n"
         crontab_update_cmd = f"cat << 'EOF' | crontab -\n{crontab_content}EOF"
         res_cron_write = run_ssh(crontab_update_cmd)
         if res_cron_write.returncode == 0:
-            print("      Crontab 등록 완료! (America/New_York 월~금 16:05)")
+            print(f"      Crontab 등록 완료! ({cron_entry})")
         else:
             print(f"[FAIL] Crontab 등록 오류: {res_cron_write.stderr}")
 

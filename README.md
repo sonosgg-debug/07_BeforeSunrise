@@ -108,20 +108,10 @@ TELEGRAM_CHAT_ID=5638262425
 오라클 서버의 `crontab`에 시간대(`CRON_TZ`)를 지정하면, **서머타임 변경 시기를 신경 쓰지 않아도 사계절 내내 마감 5분 뒤에 정확히 실행**됩니다.
 
 ### 크론탭(crontab) 등록 방법:
-터미널에서 크론탭 편집기를 엽니다:
-```bash
-crontab -e
-```
-
-파일 맨 아래에 다음 내용을 추가합니다 (경로는 본인 서버 경로에 맞게 지정):
+서버의 Crontab에 다음과 같이 등록되어 있습니다 (배포 스크립트 실행 시 자동 등록됨):
 ```cron
-# 미국 동부 시간(New York) 기준 월~금요일 16:05 (마감 5분 후)
-# -> 한국 시간 기준 화~토요일 아침 (서머타임 시 05:05, 해제 시 06:05 자동 적용)
-CRON_TZ=America/New_York
-5 16 * * 1-5 /home/ubuntu/MorningWatch/run_oracle.sh >> /home/ubuntu/MorningWatch/execution.log 2>&1
+# 미국 시장 마감 5분 후 자동 실행 (화~토 아침 05:05 / 06:05 자동 적응)
+# - 서머타임 기간(EDT): 05:05 KST 실행 (NY 16:05), 06:05는 자동 스킵
+# - 비서머타임 기간(EST): 05:05는 자동 스킵 (NY 15:05), 06:05 KST 실행 (NY 16:05)
+5 5,6 * * 1-6 /home/ubuntu/MorningWatch/run_oracle.sh --cron
 ```
-
-> 💡 **참고**:
-> 혹시 서버의 cron이 `CRON_TZ` 문법을 지원하지 않는 환경(아주 구형 cron)인 경우, 한국 시간(KST) 기준으로 다음과 같이 등록하실 수 있습니다:
-> - 비서머타임 시기: `5 6 * * 2-6 /home/ubuntu/MorningWatch/run_oracle.sh ...` (화~토 06:05)
-> - 서머타임 시기: `5 5 * * 2-6 /home/ubuntu/MorningWatch/run_oracle.sh ...` (화~토 05:05)
