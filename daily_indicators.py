@@ -613,7 +613,7 @@ def main():
 
     date_str = datetime.now().strftime("%Y-%m-%d")
     update_time_str = datetime.now().strftime("%Y-%m-%d-%H:%M")
-    img_filename = os.path.join(OUTPUT_DIR, f"MorningWatch_{date_str}.png")
+    img_filename = os.path.join(OUTPUT_DIR, f"BeforeSunrise_{date_str}.png")
 
     # Render table image directly without creating Excel file
     render_indicators_image(data, candle_data, histories, update_time_str, date_str, img_filename)

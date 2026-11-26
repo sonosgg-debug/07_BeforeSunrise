@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================================
-# MorningWatch - Oracle Linux Server Execution Script
+# BeforeSunrise - Oracle Linux Server Execution Script
 # ==============================================================================
 
 # Change to script directory

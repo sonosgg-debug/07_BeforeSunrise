@@ -1,6 +1,6 @@
-# MorningWatch (일일 투자 지표 자동 발송 봇)
+# BeforeSunrise (일일 투자 지표 자동 발송 봇)
 
-매일 아침 글로벌 주요 17대 투자 지표(미국 지수, 반도체, 원자재, 환율, 금리, 비트코인 및 **KOSPI200 야간 선물 지수**)를 자동 수집하고, 고품질 대시보드 테이블 이미지(PNG)를 생성하여 **텔레그램 채널/개인 챗**으로 전송하는 자동화 애플리케이션입니다.
+매일 아침 글로벌 주요 20대 투자 지표(미국 지수, 반도체, 주요 빅테크/AI, 원자재, 환율, 금리, 비트코인 및 **KOSPI200 야간 선물 지수**)를 자동 수집하고, 고품질 대시보드 테이블 이미지(PNG)를 생성하여 **텔레그램 채널/개인 챗**으로 전송하는 자동화 애플리케이션입니다.
 
 ---
 
@@ -19,15 +19,17 @@
    - 구형 SMTP 메일 발송 기능을 삭제하고, 생성된 PNG 이미지를 **텔레그램 봇 API(`sendPhoto`)**를 통해 스마트폰으로 즉시 전송합니다.
 
 4. **미국 시장 마감 시간 및 서머타임(DST) 자동 대응 스케줄링**
-   - 뉴욕 증시 마감(현지 16:00) 후 5분 뒤(16:05)에 실행되도록 리눅스 `crontab`에 `CRON_TZ=America/New_York` 시간대 설정을 적용하여, **서머타임 기간(한국 05:05)과 해제 기간(한국 06:05)을 사람이 직접 변경할 필요 없이 사계절 내내 전자동 실행**됩니다.
+   - 뉴욕 증시 마감(현지 16:00) 후 5분 뒤(16:05)에 실행되도록 뉴욕 현지 시각(16:xx) 검증 가드를 적용하여, **서머타임 기간(한국 05:05)과 해제 기간(한국 06:05)을 사람이 직접 변경할 필요 없이 사계절 내내 전자동 실행**됩니다.
 
 ---
 
 ## 📁 디렉터리 구조
 
 ```text
-07 MorningWatch/
+07 BeforeSunrise/
 ├── daily_indicators.py       # 핵심 데이터 수집, 렌더링, 텔레그램 발송 실행 파일
+├── deploy_to_oracle.py       # 오라클 제2서버 원클릭 배포 & 동기화 도구
+├── run_daily_indicators.bat  # 윈도우 로컬 실행 배치 파일 (상대경로 적용)
 ├── run_oracle.sh             # 오라클 리눅스 서버 실행 쉘 스크립트
 ├── requirements.txt          # Python 필수 라이브러리 목록
 ├── .env                      # API 키 및 텔레그램 설정 (Git 비공개 대상)
@@ -37,7 +39,7 @@
 │   ├── NanumGothic.ttf
 │   └── NanumGothicBold.ttf
 └── DailyData/                # 결과 이미지 및 데이터 저장 폴더
-    ├── MorningWatch_YYYY-MM-DD.png
+    ├── BeforeSunrise_YYYY-MM-DD.png
     └── kospif_ngt_history.json
 ```
 
@@ -45,21 +47,17 @@
 
 ## 🚀 오라클 서버(Linux) 배포 및 설정 가이드
 
-### 1단계: GitHub에 코드 올리기 (PC에서 진행)
-`.env` 파일과 민감 정보는 `.gitignore`에 의해 제외되므로 안심하고 푸시하세요:
+### 1단계: 배포 도구 이용 (가장 간편한 방법)
+로컬 PC에서 아래 명령어를 실행하면 오라클 제2서버(`/home/ubuntu/BeforeSunrise`)로 파일 패키징, 가상환경 구성, 크론탭 스케줄러 등록까지 전자동으로 완료됩니다:
 ```bash
-git add .
-git commit -m "Update KIS API, direct PNG rendering, and Telegram bot integration"
-git push origin main
+python deploy_to_oracle.py
 ```
 
-### 2단계: 오라클 서버에서 코드 클론 및 환경 설정
-오라클 서버 터미널(SSH)에 접속하여 진행합니다:
-
+### 2단계: 수동 클론 방식 이용 시
 ```bash
 # 1. 저장소 클론 (본인의 GitHub 리포지토리 주소 입력)
-git clone https://github.com/your-id/MorningWatch.git
-cd MorningWatch
+git clone https://github.com/sonosgg-debug/07_BeforeSunrise.git BeforeSunrise
+cd BeforeSunrise
 
 # 2. 실행 권한 부여
 chmod +x run_oracle.sh
@@ -71,47 +69,14 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 3단계: 환경 변수(`.env`) 설정
-오라클 서버에 `.env` 파일을 생성하고 본인의 API 키를 입력합니다:
-
-```bash
-nano .env
-```
-내용 작성 예시:
-```env
-# 1. 한국투자증권(KIS) 실전 계정 키
-KIS_APP_KEY=PSBf...
-KIS_APP_SECRET=9d82...
-
-# 2. 텔레그램 봇 토큰 및 수신 Chat ID
-TELEGRAM_BOT_TOKEN=9253423656:AAFCWLZn...
-TELEGRAM_CHAT_ID=5638262425
-```
-*(저장: `Ctrl + O` -> `Enter`, 종료: `Ctrl + X`)*
-
-### 4단계: 테스트 실행
-오라클 서버에서 정상 작동하는지 수동으로 실행해 봅니다:
-```bash
-./run_oracle.sh
-```
-텔레그램 방으로 오늘 자 투자 지표 이미지가 도착하면 정상 설정된 것입니다.
-
 ---
 
 ## ⏰ 미국 시장 마감 5분 후 자동 실행 (Crontab 설정)
 
-미국 정규 주식 시장은 현지 시각(US/Eastern)으로 **월~금 09:30 ~ 16:00**에 열립니다.
-마감 5분 후 시점은 **현지 시각 16:05 (월~금)**입니다.
-- **서머타임 기간 (3월 둘째 일요일 ~ 11월 첫째 일요일):** 한국 시각 **05:05**
-- **비서머타임 기간 (겨울철 표준시):** 한국 시각 **06:05**
-
-오라클 서버의 `crontab`에 시간대(`CRON_TZ`)를 지정하면, **서머타임 변경 시기를 신경 쓰지 않아도 사계절 내내 마감 5분 뒤에 정확히 실행**됩니다.
-
-### 크론탭(crontab) 등록 방법:
 서버의 Crontab에 다음과 같이 등록되어 있습니다 (배포 스크립트 실행 시 자동 등록됨):
 ```cron
 # 미국 시장 마감 5분 후 자동 실행 (화~토 아침 05:05 / 06:05 자동 적응)
 # - 서머타임 기간(EDT): 05:05 KST 실행 (NY 16:05), 06:05는 자동 스킵
 # - 비서머타임 기간(EST): 05:05는 자동 스킵 (NY 15:05), 06:05 KST 실행 (NY 16:05)
-5 5,6 * * 1-6 /home/ubuntu/MorningWatch/run_oracle.sh --cron
+5 5,6 * * 1-6 /home/ubuntu/BeforeSunrise/run_oracle.sh --cron
 ```

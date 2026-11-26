@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-MorningWatch Deploy & Sync to Oracle 2nd Server (168.110.34.155)
-Packages MorningWatch files (including .env), deploys to Oracle Server,
+BeforeSunrise Deploy & Sync to Oracle 2nd Server (168.110.34.155)
+Packages BeforeSunrise files (including .env), deploys to Oracle Server,
 sets up Python venv, and configures Crontab.
 """
 
@@ -17,7 +17,7 @@ ROOT_DIR = CURRENT_DIR.parent
 KEY_FILE = ROOT_DIR / "00 API Key" / "ssh-key-2026-10-24.key"
 HOST_IP = "168.110.34.155"  # Oracle 2nd Server
 USER = "ubuntu"
-REMOTE_DIR = "/home/ubuntu/MorningWatch"
+REMOTE_DIR = "/home/ubuntu/BeforeSunrise"
 
 EXCLUDE_NAMES = {
     ".git", "__pycache__", "execution.log", "*.log",
@@ -59,7 +59,7 @@ def run_scp(local_file, remote_dest):
 
 def main():
     print("=" * 65)
-    print(f"  MorningWatch Deployment to Oracle 2nd Server ({HOST_IP})")
+    print(f"  BeforeSunrise Deployment to Oracle 2nd Server ({HOST_IP})")
     print("=" * 65)
 
     if not KEY_FILE.exists():
@@ -83,7 +83,7 @@ def main():
         # 2. Upload to Oracle Server
         print(f"\n[2/5] 오라클 제2서버({HOST_IP})로 업로드 중...")
         run_ssh(f"mkdir -p {REMOTE_DIR}")
-        res = run_scp(tmp_tar, f"/home/ubuntu/tmp_morningwatch.tar.gz")
+        res = run_scp(tmp_tar, f"/home/ubuntu/tmp_beforesunrise.tar.gz")
         if res.returncode != 0:
             print(f"[FAIL] 업로드 실패: {res.stderr}")
             return False
@@ -92,8 +92,8 @@ def main():
         # 3. Unpack on Remote Server
         print("\n[3/5] 원격 서버에 파일 압축 해제 중...")
         unpack_cmd = (
-            f"tar -xzf /home/ubuntu/tmp_morningwatch.tar.gz -C {REMOTE_DIR}/ && "
-            f"rm -f /home/ubuntu/tmp_morningwatch.tar.gz && "
+            f"tar -xzf /home/ubuntu/tmp_beforesunrise.tar.gz -C {REMOTE_DIR}/ && "
+            f"rm -f /home/ubuntu/tmp_beforesunrise.tar.gz && "
             f"chmod +x {REMOTE_DIR}/run_oracle.sh"
         )
         res_unpack = run_ssh(unpack_cmd)
@@ -129,7 +129,7 @@ def main():
             # Clean up old CRON_TZ or old morningwatch entries
             if line.startswith("CRON_TZ="):
                 continue
-            if "run_oracle.sh" in line or "MorningWatch" in line:
+            if "run_oracle.sh" in line or "MorningWatch" in line or "BeforeSunrise" in line:
                 continue
             new_cron_lines.append(line)
 
