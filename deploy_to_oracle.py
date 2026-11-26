@@ -116,9 +116,9 @@ def main():
         else:
             print("      가상환경 및 패키지 설치 완료.")
 
-        # 5. Configure Crontab (KST 05:05 & 06:05 / Monday-Saturday with NY 16:xx DST guard)
-        print("\n[5/5] Crontab 스케줄러 등록 중 (미국 시장 마감 5분 후: 비서머타임 06:05 / 서머타임 05:05)...")
-        cron_entry = f"5 5,6 * * 1-6 {REMOTE_DIR}/run_oracle.sh --cron"
+        # 5. Configure Crontab (KST 05:05 & 06:05 / Tuesday-Saturday with NY 16:xx DST guard)
+        print("\n[5/5] Crontab 스케줄러 등록 중 (미국 시장 마감 5분 후: 화~토 아침 06:05 / 서머타임 05:05)...")
+        cron_entry = f"5 5,6 * * 2-6 {REMOTE_DIR}/run_oracle.sh --cron"
         
         # Read existing crontab
         res_cron_read = run_ssh("crontab -l 2>/dev/null || true")
@@ -151,5 +151,42 @@ def main():
         if tmp_tar.exists():
             tmp_tar.unlink()
 
+def pull_data_from_remote():
+    """Download generated PNG and data files from Oracle server to local DailyData."""
+    print("=" * 65)
+    print(f"  오라클 제2서버({HOST_IP}) -> 로컬 DailyData 파일 동기화 (다운로드)")
+    print("=" * 65)
+    if not KEY_FILE.exists():
+        print(f"[ERROR] SSH Key not found at {KEY_FILE}")
+        return False
+
+    local_daily = CURRENT_DIR / "DailyData"
+    local_daily.mkdir(exist_ok=True)
+
+    res = run_ssh(f"ls {REMOTE_DIR}/DailyData/BeforeSunrise_*.png 2>/dev/null || true")
+    remote_files = [f.strip() for f in res.stdout.splitlines() if f.strip().endswith('.png')]
+    if not remote_files:
+        print("[Notice] 원격 서버에 동기화할 PNG 파일이 없습니다.")
+        return True
+
+    for rf in remote_files:
+        fname = Path(rf).name
+        dest = local_daily / fname
+        print(f"      다운로드 중: {fname}...")
+        scp_cmd = [
+            "scp", "-i", str(KEY_FILE),
+            "-o", "StrictHostKeyChecking=no",
+            "-o", "ConnectTimeout=15",
+            f"{USER}@{HOST_IP}:{rf}",
+            str(dest)
+        ]
+        subprocess.run(scp_cmd, check=True)
+
+    print("\n[성공] 원격 서버의 PNG 파일들이 로컬 DailyData 폴더로 동기화되었습니다!")
+    return True
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1 and sys.argv[1].lower() in ['--pull', '-p', 'pull']:
+        pull_data_from_remote()
+    else:
+        main()

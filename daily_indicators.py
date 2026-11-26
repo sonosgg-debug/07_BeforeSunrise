@@ -1,12 +1,14 @@
 import os
+import sys
 import re
 import json
 import time
 import zipfile
 import io
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
 from dotenv import load_dotenv
 import requests
+import pytz
 import pandas as pd
 import yfinance as yf
 from PIL import Image, ImageDraw, ImageFont
@@ -220,6 +222,148 @@ def get_kospi200_night_futures_kis():
     except Exception as e:
         print(f"[KIS] Failed to fetch KOSPI 200 Futures via KIS API: {e}")
         return None
+
+
+# ==============================================================================
+# 1.5. US Stock Market Holiday & Trading Day Verification
+# ==============================================================================
+
+def get_easter_date(year):
+    """Calculate Easter Sunday for a given year using Meeus/Jones/Butcher algorithm."""
+    a = year % 19
+    b = year // 100
+    c = year % 100
+    d = b // 4
+    e = b % 4
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i = c // 4
+    k = c % 4
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l) // 451
+    month = (h + l - 7 * m + 114) // 31
+    day = ((h + l - 7 * m + 114) % 31) + 1
+    return date(year, month, day)
+
+
+def get_nth_weekday(year, month, weekday, n):
+    """Find the n-th occurrence of a weekday in a given month (weekday: 0=Mon, ..., 6=Sun)."""
+    d = date(year, month, 1)
+    diff = (weekday - d.weekday()) % 7
+    d += timedelta(days=diff)
+    d += timedelta(weeks=n - 1)
+    return d
+
+
+def get_last_weekday(year, month, weekday):
+    """Find the last occurrence of a weekday in a given month."""
+    if month == 12:
+        d = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        d = date(year, month + 1, 1) - timedelta(days=1)
+    diff = (d.weekday() - weekday) % 7
+    return d - timedelta(days=diff)
+
+
+def get_nyse_holidays(year):
+    """
+    Return dictionary of official NYSE/NASDAQ stock market holidays for a given year.
+    Matches official US market holiday rules including observed holiday shifts.
+    """
+    h = {}
+    # 1. New Year's Day (Jan 1)
+    ny = date(year, 1, 1)
+    if ny.weekday() == 6:
+        h[date(year, 1, 2)] = "New Year's Day (대체휴일)"
+    elif ny.weekday() != 5:
+        h[ny] = "New Year's Day"
+
+    # 2. Martin Luther King, Jr. Day (3rd Monday of Jan)
+    h[get_nth_weekday(year, 1, 0, 3)] = "Martin Luther King, Jr. Day"
+
+    # 3. Washington's Birthday / Presidents' Day (3rd Monday of Feb)
+    h[get_nth_weekday(year, 2, 0, 3)] = "Presidents' Day"
+
+    # 4. Good Friday (Friday before Easter)
+    h[get_easter_date(year) - timedelta(days=2)] = "Good Friday (성금요일)"
+
+    # 5. Memorial Day (Last Monday of May)
+    h[get_last_weekday(year, 5, 0)] = "Memorial Day"
+
+    # 6. Juneteenth National Independence Day (June 19)
+    june = date(year, 6, 19)
+    if june.weekday() == 6:
+        h[date(year, 6, 20)] = "Juneteenth (대체휴일)"
+    elif june.weekday() == 5:
+        h[date(year, 6, 18)] = "Juneteenth (대체휴일)"
+    else:
+        h[june] = "Juneteenth"
+
+    # 7. Independence Day (July 4)
+    jul4 = date(year, 7, 4)
+    if jul4.weekday() == 6:
+        h[date(year, 7, 5)] = "Independence Day (대체휴일)"
+    elif jul4.weekday() == 5:
+        h[date(year, 7, 3)] = "Independence Day (대체휴일)"
+    else:
+        h[jul4] = "Independence Day"
+
+    # 8. Labor Day (1st Monday of Sep)
+    h[get_nth_weekday(year, 9, 0, 1)] = "Labor Day"
+
+    # 9. Thanksgiving Day (4th Thursday of Nov)
+    h[get_nth_weekday(year, 11, 3, 4)] = "Thanksgiving Day (추수감사절)"
+
+    # 10. Christmas Day (Dec 25)
+    xmas = date(year, 12, 25)
+    if xmas.weekday() == 6:
+        h[date(year, 12, 26)] = "Christmas Day (대체휴일)"
+    elif xmas.weekday() == 5:
+        h[date(year, 12, 24)] = "Christmas Day (대체휴일)"
+    else:
+        h[xmas] = "Christmas Day"
+
+    return h
+
+
+def check_us_market_open():
+    """
+    Check if the US stock market (NYSE/NASDAQ) was open today (in New York time).
+    When executed at 05:05/06:05 KST, the corresponding New York time is 16:05 of the previous day,
+    which is right after the US regular market close (16:00 NY).
+    Returns: (is_open: bool, reason: str, ny_date_str: str)
+    """
+    tz_ny = pytz.timezone('America/New_York')
+    ny_now = datetime.now(tz_ny)
+    ny_date = ny_now.date()
+    ny_date_str = ny_date.strftime('%Y-%m-%d')
+    weekday = ny_date.weekday()
+
+    # 1. Weekend Check (Saturday=5, Sunday=6 in NY)
+    if weekday == 5:
+        return False, f"주말 (토요일, NY: {ny_date_str})", ny_date_str
+    if weekday == 6:
+        return False, f"주말 (일요일, NY: {ny_date_str})", ny_date_str
+
+    # 2. Official NYSE Holiday Check
+    holidays = get_nyse_holidays(ny_date.year)
+    if ny_date in holidays:
+        holiday_name = holidays[ny_date]
+        return False, f"미국 증시 공휴일 ({holiday_name}, NY: {ny_date_str})", ny_date_str
+
+    # 3. yfinance Live Market Data Verification (handles unscheduled closures/national mourning)
+    try:
+        t = yf.Ticker('^GSPC')
+        hist = t.history(period='5d')
+        if hist is not None and not hist.empty:
+            last_traded_date = hist.index[-1].date()
+            if ny_now.hour >= 16 and last_traded_date < ny_date:
+                return False, f"미국 증시 미개장/휴장 확인 (최근 거래일: {last_traded_date}, NY 당일: {ny_date_str})", ny_date_str
+    except Exception as e:
+        print(f"[Warn] yfinance market closure check skipped: {e}")
+
+    return True, f"정상 거래일 (NY: {ny_date_str})", ny_date_str
 
 
 # ==============================================================================
@@ -514,8 +658,12 @@ def render_indicators_image(data_rows, candle_data, histories, update_time_str, 
 # 4. Telegram Notification
 # ==============================================================================
 
-def send_telegram_photo(image_path, caption=None):
-    """Send generated PNG indicator image via Telegram bot."""
+def send_telegram_indicator(image_path, caption=None):
+    """
+    Send investment indicator image via Telegram bot:
+    1. sendPhoto: 텔레그램 채팅방에서 바로 볼 수 있는 고화질 대시보드 사진 미리보기 전송
+    2. sendDocument: 원본 화질 손실 없이 .png 파일 자체로 다운로드/저장할 수 있는 무손실 파일 전송
+    """
     bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
     chat_id = os.getenv('TELEGRAM_CHAT_ID')
 
@@ -523,25 +671,46 @@ def send_telegram_photo(image_path, caption=None):
         print("Telegram bot token or chat ID not found in .env. Skipping Telegram message.")
         return False
 
-    url = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
+    success = False
+    filename = os.path.basename(image_path)
+
+    # 1. 채팅방 고화질 사진 미리보기 전송
+    photo_url = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
     try:
         with open(image_path, 'rb') as f:
             files = {'photo': f}
             data = {'chat_id': chat_id}
             if caption:
                 data['caption'] = caption
-            r = requests.post(url, data=data, files=files, timeout=30)
+            r = requests.post(photo_url, data=data, files=files, timeout=30)
             r.raise_for_status()
             res = r.json()
             if res.get('ok'):
                 print(f"Telegram photo successfully sent to chat {chat_id}")
-                return True
+                success = True
             else:
-                print(f"Telegram API returned error: {res}")
-                return False
+                print(f"Telegram sendPhoto returned error: {res}")
     except Exception as e:
         print(f"Failed to send Telegram photo: {e}")
-        return False
+
+    # 2. 원본 PNG 파일(Document) 전송 - 파일 자체로 다운로드 및 저장 가능
+    doc_url = f"https://api.telegram.org/bot{bot_token}/sendDocument"
+    try:
+        with open(image_path, 'rb') as f:
+            files = {'document': (filename, f, 'image/png')}
+            data = {'chat_id': chat_id, 'caption': f"📁 {filename} (원본 무손실 PNG 파일)"}
+            r = requests.post(doc_url, data=data, files=files, timeout=30)
+            r.raise_for_status()
+            res = r.json()
+            if res.get('ok'):
+                print(f"Telegram PNG document successfully sent to chat {chat_id}")
+                success = True
+            else:
+                print(f"Telegram sendDocument returned error: {res}")
+    except Exception as e:
+        print(f"Failed to send Telegram document: {e}")
+
+    return success
 
 
 # ==============================================================================
@@ -549,6 +718,16 @@ def send_telegram_photo(image_path, caption=None):
 # ==============================================================================
 
 def main():
+    # 0. 미국 시장(NYSE/NASDAQ) 개장 여부 검증 (토/일 주말, 추수감사절 등 공휴일 자동 스킵)
+    force_run = ('--force' in sys.argv)
+    if not force_run:
+        is_open, reason, ny_date_str = check_us_market_open()
+        if not is_open:
+            print(f"[Market Holiday Guard] {reason} -> 미국 시장 휴장으로 실행 및 텔레그램 발송을 건너뜁니다.")
+            return
+    else:
+        print("[Notice] --force 옵션이 감지되어 휴장 여부와 관계없이 강제 실행합니다.")
+
     tickers = {
         '01. 미국 S&P 500 지수': '^GSPC',
         '02. 미국 나스닥 지수': '^IXIC',
@@ -630,9 +809,9 @@ def main():
     # Render table image directly without creating Excel file
     render_indicators_image(data, candle_data, histories, update_time_str, date_str, img_filename)
 
-    # Send Telegram notification
+    # Send Telegram notification (Photo preview + uncompressed PNG document)
     caption = f"[{date_str}] 미국 시장 주요 지표"
-    send_telegram_photo(img_filename, caption=caption)
+    send_telegram_indicator(img_filename, caption=caption)
 
 
 if __name__ == '__main__':

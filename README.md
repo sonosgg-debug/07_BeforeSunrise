@@ -78,5 +78,16 @@ pip install -r requirements.txt
 # 미국 시장 마감 5분 후 자동 실행 (화~토 아침 05:05 / 06:05 자동 적응)
 # - 서머타임 기간(EDT): 05:05 KST 실행 (NY 16:05), 06:05는 자동 스킵
 # - 비서머타임 기간(EST): 05:05는 자동 스킵 (NY 15:05), 06:05 KST 실행 (NY 16:05)
-5 5,6 * * 1-6 /home/ubuntu/BeforeSunrise/run_oracle.sh --cron
+# - 토요일/일요일/공휴일(추수감사절, 크리스마스 등)은 자동 감지 후 발송 스킵
+5 5,6 * * 2-6 /home/ubuntu/BeforeSunrise/run_oracle.sh --cron
 ```
+
+### 💡 유용한 명령어
+- **원격 서버의 PNG 파일 로컬 다운로드**:
+  ```bash
+  python deploy_to_oracle.py --pull
+  ```
+- **휴장 여부 무시하고 즉시 강제 테스트 실행**:
+  ```bash
+  python daily_indicators.py --force
+  ```
