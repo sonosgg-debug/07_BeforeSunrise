@@ -342,7 +342,7 @@ def render_indicators_image(data_rows, candle_data, histories, update_time_str, 
     header_y1 = title_h
     header_y2 = title_h + header_h
     draw.rectangle([(0, header_y1), (total_w - 1, header_y2 - 1)], fill='#FFC000')
-    headers = ['주요 지표', '현재가', '일봉', '등락', '변동율(%)', '60일 Sparkline']
+    headers = ['주요 지표', '현재가', '일봉', '등락', '등락률(%)', '60일 Sparkline']
     for idx, (h_text, x1, x2) in enumerate(zip(headers, col_x[:-1], col_x[1:])):
         bbox = draw.textbbox((0, 0), h_text, font=font_header)
         tw = bbox[2] - bbox[0]
@@ -363,7 +363,7 @@ def render_indicators_image(data_rows, candle_data, histories, update_time_str, 
         draw.rectangle([(0, y1), (total_w - 1, y2 - 1)], fill='#FFFFFF')
 
         # Change percent background
-        change = row.get('변동율(%)')
+        change = row.get('등락률(%)')
         is_neg_fav = name.startswith(('03.', '04.', '05.', '08.', '10.'))
         if isinstance(change, (int, float)):
             if change > 0:
@@ -431,7 +431,7 @@ def render_indicators_image(data_rows, candle_data, histories, update_time_str, 
         th = bbox[3] - bbox[1]
         draw.text((col_x[4] - 8 - tw, y1 + (row_h - th) // 2 - 1), amt_str, fill='#000000', font=font_cell)
 
-        # Col 4: 변동율(%) (Right-aligned)
+        # Col 4: 등락률(%) (Right-aligned)
         chg_str = f'{change:.2f}' if isinstance(change, (int, float)) else str(change)
         bbox = draw.textbbox((0, 0), chg_str, font=font_cell)
         tw = bbox[2] - bbox[0]
@@ -574,19 +574,19 @@ def main():
                 change = kis_res["change"]
                 candle_data[name] = kis_res["candle"]
                 histories[name] = kis_res["history"]
-                data.append({'주요 지표': name, '현재가': price, '일봉': '', '등락': change_amt, '변동율(%)': change})
+                data.append({'주요 지표': name, '현재가': price, '일봉': '', '등락': change_amt, '등락률(%)': change})
             else:
-                data.append({'주요 지표': name, '현재가': 'N/A', '일봉': '', '등락': 'N/A', '변동율(%)': 'N/A'})
+                data.append({'주요 지표': name, '현재가': 'N/A', '일봉': '', '등락': 'N/A', '등락률(%)': 'N/A'})
 
         elif ticker == 'FEAR_GREED':
             print(f"Fetching {name} via requests...")
             price, change_amt, change, history = get_fear_and_greed_index()
             if price is not None and change is not None:
-                data.append({'주요 지표': name, '현재가': round(price, 2), '일봉': '', '등락': round(change_amt, 2), '변동율(%)': round(change, 2)})
+                data.append({'주요 지표': name, '현재가': round(price, 2), '일봉': '', '등락': round(change_amt, 2), '등락률(%)': round(change, 2)})
                 if history:
                     histories[name] = history
             else:
-                data.append({'주요 지표': name, '현재가': 'N/A', '일봉': '', '등락': 'N/A', '변동율(%)': 'N/A'})
+                data.append({'주요 지표': name, '현재가': 'N/A', '일봉': '', '등락': 'N/A', '등락률(%)': 'N/A'})
 
         else:
             print(f"Fetching {name} via yfinance ({ticker})...")
@@ -604,12 +604,12 @@ def main():
                     high_p = hist['High'].iloc[-1]
                     low_p = hist['Low'].iloc[-1]
                     candle_data[name] = (open_p, high_p, low_p, current_price)
-                    data.append({'주요 지표': name, '현재가': round(current_price, 2), '일봉': '', '등락': round(change_amt, 2), '변동율(%)': round(change, 2)})
+                    data.append({'주요 지표': name, '현재가': round(current_price, 2), '일봉': '', '등락': round(change_amt, 2), '등락률(%)': round(change, 2)})
                 else:
-                    data.append({'주요 지표': name, '현재가': 'N/A', '일봉': '', '등락': 'N/A', '변동율(%)': 'N/A'})
+                    data.append({'주요 지표': name, '현재가': 'N/A', '일봉': '', '등락': 'N/A', '등락률(%)': 'N/A'})
             except Exception as e:
                 print(f"Failed to fetch {name}: {e}")
-                data.append({'주요 지표': name, '현재가': 'N/A', '일봉': '', '등락': 'N/A', '변동율(%)': 'N/A'})
+                data.append({'주요 지표': name, '현재가': 'N/A', '일봉': '', '등락': 'N/A', '등락률(%)': 'N/A'})
 
     date_str = datetime.now().strftime("%Y-%m-%d")
     update_time_str = datetime.now().strftime("%Y-%m-%d-%H:%M")
