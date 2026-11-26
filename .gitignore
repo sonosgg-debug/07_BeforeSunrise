@@ -1,0 +1,31 @@
+# Environment Variables
+.env
+DailyCheckMail.env
+
+# Auth & Tokens
+kis_token.json
+
+# Python cache & virtualenv
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# IDE & Editor
+.vscode/
+.idea/
+
+# Logs & temp files
+*.log
+execution.log
+page_source.html
+api_response.json
+
+# Output test files & legacy excel
+DailyData/*.xlsx
+DailyData/*.png
+!DailyData/Daily_Indicators_2026-11-26.png
+DailyData/candle_images/
+update_script.py
