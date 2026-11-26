@@ -306,15 +306,17 @@ def get_font(size, bold=False):
     return ImageFont.load_default()
 
 
-def render_indicators_image(data_rows, candle_data, histories, update_time_str, output_path):
+def render_indicators_image(data_rows, candle_data, histories, update_time_str, date_str, output_path):
     """Render investment indicator table directly into a PNG image identical to Excel styling."""
     col_widths = [280, 85, 50, 95, 100, 203]
     total_w = sum(col_widths)
+    title_h = 42
     header_h = 25
     row_h = 29
     footer_h = 22
-    total_h = header_h + len(data_rows) * row_h + footer_h
+    total_h = title_h + header_h + len(data_rows) * row_h + footer_h
 
+    font_title = get_font(16, bold=True)
     font_header = get_font(13, bold=True)
     font_cell = get_font(12, bold=False)
     font_footer = get_font(10, bold=False)
@@ -326,20 +328,32 @@ def render_indicators_image(data_rows, candle_data, histories, update_time_str, 
     for w in col_widths:
         col_x.append(col_x[-1] + w)
 
+    # 0. Title Row (No background color / White)
+    draw.rectangle([(0, 0), (total_w - 1, title_h - 1)], fill='#FFFFFF')
+    title_text = f"[{date_str}] 미국 시장 주요 지표"
+    bbox = draw.textbbox((0, 0), title_text, font=font_title)
+    tw = bbox[2] - bbox[0]
+    th = bbox[3] - bbox[1]
+    tx = (total_w - tw) // 2
+    ty = (title_h - th) // 2 - 1
+    draw.text((tx, ty), title_text, fill='#000000', font=font_title)
+
     # 1. Header Row
-    draw.rectangle([(0, 0), (total_w - 1, header_h - 1)], fill='#FFC000')
+    header_y1 = title_h
+    header_y2 = title_h + header_h
+    draw.rectangle([(0, header_y1), (total_w - 1, header_y2 - 1)], fill='#FFC000')
     headers = ['주요 지표', '현재가', '일봉', '등락', '변동율(%)', '60일 Sparkline']
     for idx, (h_text, x1, x2) in enumerate(zip(headers, col_x[:-1], col_x[1:])):
         bbox = draw.textbbox((0, 0), h_text, font=font_header)
         tw = bbox[2] - bbox[0]
         th = bbox[3] - bbox[1]
         tx = x1 + (x2 - x1 - tw) // 2
-        ty = (header_h - th) // 2 - 1
+        ty = header_y1 + (header_h - th) // 2 - 1
         draw.text((tx, ty), h_text, fill='#000000', font=font_header)
 
     # 2. Data Rows
     for r_idx, row in enumerate(data_rows):
-        y1 = header_h + r_idx * row_h
+        y1 = header_y2 + r_idx * row_h
         y2 = y1 + row_h
         name = row['주요 지표']
         num = int(name.split('.')[0]) if '.' in name else (r_idx + 1)
@@ -465,15 +479,15 @@ def render_indicators_image(data_rows, candle_data, histories, update_time_str, 
 
     # 4. Grid lines
     grid_color = '#D9D9D9'
+    # Vertical grid lines (starting from header down to footer, excluding title row)
     for x in col_x:
-        draw.line([(x, 0), (x, total_h - 1)], fill=grid_color, width=1)
-    for r in range(len(data_rows) + 2):
-        if r == 0:
-            y = 0
-        elif r <= len(data_rows):
-            y = header_h + (r - 1) * row_h
-        else:
-            y = total_h - footer_h
+        draw.line([(x, title_h), (x, total_h - 1)], fill=grid_color, width=1)
+
+    # Horizontal grid lines
+    draw.line([(0, title_h), (total_w - 1, title_h)], fill=grid_color, width=1)
+    draw.line([(0, header_y2), (total_w - 1, header_y2)], fill=grid_color, width=1)
+    for r in range(1, len(data_rows) + 1):
+        y = header_y2 + r * row_h
         draw.line([(0, y), (total_w - 1, y)], fill=grid_color, width=1)
     draw.line([(0, total_h - 1), (total_w - 1, total_h - 1)], fill=grid_color, width=1)
 
@@ -598,14 +612,14 @@ def main():
                 data.append({'주요 지표': name, '현재가': 'N/A', '일봉': '', '등락': 'N/A', '변동율(%)': 'N/A'})
 
     date_str = datetime.now().strftime("%Y-%m-%d")
-    update_time_str = datetime.now().strftime("%Y-%m-%d-%H%M%S")
-    img_filename = os.path.join(OUTPUT_DIR, f"Daily_Indicators_{date_str}.png")
+    update_time_str = datetime.now().strftime("%Y-%m-%d-%H:%M")
+    img_filename = os.path.join(OUTPUT_DIR, f"MorningWatch_{date_str}.png")
 
     # Render table image directly without creating Excel file
-    render_indicators_image(data, candle_data, histories, update_time_str, img_filename)
+    render_indicators_image(data, candle_data, histories, update_time_str, date_str, img_filename)
 
     # Send Telegram notification
-    caption = f"[{date_str}] 일일 투자 지표 (Daily Investment Indicators)"
+    caption = f"[{date_str}] 미국 시장 주요 지표"
     send_telegram_photo(img_filename, caption=caption)
 
 

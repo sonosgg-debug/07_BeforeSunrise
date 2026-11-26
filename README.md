@@ -37,7 +37,7 @@
 │   ├── NanumGothic.ttf
 │   └── NanumGothicBold.ttf
 └── DailyData/                # 결과 이미지 및 데이터 저장 폴더
-    ├── Daily_Indicators_YYYY-MM-DD.png
+    ├── MorningWatch_YYYY-MM-DD.png
     └── kospif_ngt_history.json
 ```
 
