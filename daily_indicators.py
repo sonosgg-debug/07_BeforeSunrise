@@ -658,12 +658,8 @@ def render_indicators_image(data_rows, candle_data, histories, update_time_str, 
 # 4. Telegram Notification
 # ==============================================================================
 
-def send_telegram_indicator(image_path, caption=None):
-    """
-    Send investment indicator image via Telegram bot:
-    1. sendPhoto: 텔레그램 채팅방에서 바로 볼 수 있는 고화질 대시보드 사진 미리보기 전송
-    2. sendDocument: 원본 화질 손실 없이 .png 파일 자체로 다운로드/저장할 수 있는 무손실 파일 전송
-    """
+def send_telegram_photo(image_path, caption=None):
+    """Send generated indicator image via Telegram bot (single clean high-resolution photo)."""
     bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
     chat_id = os.getenv('TELEGRAM_CHAT_ID')
 
@@ -671,46 +667,25 @@ def send_telegram_indicator(image_path, caption=None):
         print("Telegram bot token or chat ID not found in .env. Skipping Telegram message.")
         return False
 
-    success = False
-    filename = os.path.basename(image_path)
-
-    # 1. 채팅방 고화질 사진 미리보기 전송
-    photo_url = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
+    url = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
     try:
         with open(image_path, 'rb') as f:
             files = {'photo': f}
             data = {'chat_id': chat_id}
             if caption:
                 data['caption'] = caption
-            r = requests.post(photo_url, data=data, files=files, timeout=30)
+            r = requests.post(url, data=data, files=files, timeout=30)
             r.raise_for_status()
             res = r.json()
             if res.get('ok'):
                 print(f"Telegram photo successfully sent to chat {chat_id}")
-                success = True
+                return True
             else:
-                print(f"Telegram sendPhoto returned error: {res}")
+                print(f"Telegram API returned error: {res}")
+                return False
     except Exception as e:
         print(f"Failed to send Telegram photo: {e}")
-
-    # 2. 원본 PNG 파일(Document) 전송 - 파일 자체로 다운로드 및 저장 가능
-    doc_url = f"https://api.telegram.org/bot{bot_token}/sendDocument"
-    try:
-        with open(image_path, 'rb') as f:
-            files = {'document': (filename, f, 'image/png')}
-            data = {'chat_id': chat_id, 'caption': f"📁 {filename} (원본 무손실 PNG 파일)"}
-            r = requests.post(doc_url, data=data, files=files, timeout=30)
-            r.raise_for_status()
-            res = r.json()
-            if res.get('ok'):
-                print(f"Telegram PNG document successfully sent to chat {chat_id}")
-                success = True
-            else:
-                print(f"Telegram sendDocument returned error: {res}")
-    except Exception as e:
-        print(f"Failed to send Telegram document: {e}")
-
-    return success
+        return False
 
 
 # ==============================================================================
@@ -809,9 +784,9 @@ def main():
     # Render table image directly without creating Excel file
     render_indicators_image(data, candle_data, histories, update_time_str, date_str, img_filename)
 
-    # Send Telegram notification (Photo preview + uncompressed PNG document)
+    # Send Telegram notification (Single clean photo)
     caption = f"[{date_str}] 미국 시장 주요 지표"
-    send_telegram_indicator(img_filename, caption=caption)
+    send_telegram_photo(img_filename, caption=caption)
 
 
 if __name__ == '__main__':
