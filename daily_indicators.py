@@ -284,6 +284,25 @@ def get_fear_and_greed_index():
 # 3. Direct PNG Table Image Renderer (No Excel Required)
 # ==============================================================================
 
+def get_change_percent_bg(name, change):
+    """등락률(%) 수치에 따른 배경색 반환 (호재/악재 구분 및 3단계 농도 차등 적용)"""
+    if not isinstance(change, (int, float)) or change == 0:
+        return '#FFFFFF'
+
+    # 역방향 지표 (03, 04, 05, 08, 10): 상승 시 악재(부정), 하락 시 호재(긍정)
+    is_neg_fav = name.startswith(('03.', '04.', '05.', '08.', '10.'))
+    is_positive = (change < 0) if is_neg_fav else (change > 0)
+    abs_chg = abs(change)
+
+    # [방안 A] 3단계 차등: 1.0% 이하 / 1.0% 초과 ~ 3.0% 미만 / 3.0% 이상
+    if abs_chg <= 1.0:
+        return '#D5F5E3' if is_positive else '#FADBD8'  # 1단계 (은은한 연파스텔)
+    elif abs_chg < 3.0:
+        return '#A9DFBF' if is_positive else '#F5B7B1'  # 2단계 (부드러운 중간색)
+    else:
+        return '#52BE80' if is_positive else '#FF5733'  # 3단계 (선명한 강렬색)
+
+
 def get_font(size, bold=False):
     """Retrieve font with cross-platform fallback."""
     candidate_fonts = []
@@ -362,17 +381,10 @@ def render_indicators_image(data_rows, candle_data, histories, update_time_str, 
         # Base white background
         draw.rectangle([(0, y1), (total_w - 1, y2 - 1)], fill='#FFFFFF')
 
-        # Change percent background
+        # Change percent background (3-tier gradation)
         change = row.get('등락률(%)')
-        is_neg_fav = name.startswith(('03.', '04.', '05.', '08.', '10.'))
-        if isinstance(change, (int, float)):
-            if change > 0:
-                bg = '#FF5733' if is_neg_fav else '#CCFFCC'
-            elif change < 0:
-                bg = '#CCFFCC' if is_neg_fav else '#FF5733'
-            else:
-                bg = '#FFFFFF'
-            draw.rectangle([(col_x[4], y1), (col_x[5] - 1, y2 - 1)], fill=bg)
+        bg = get_change_percent_bg(name, change)
+        draw.rectangle([(col_x[4], y1), (col_x[5] - 1, y2 - 1)], fill=bg)
 
         # Sparkline cell background
         spark_bg = '#808080' if is_odd else '#FFFFFF'
