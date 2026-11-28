@@ -462,8 +462,8 @@ def get_change_percent_bg(name, change):
     if not isinstance(change, (int, float)) or change == 0:
         return '#FFFFFF'
 
-    # 역방향 지표 (03, 04, 05, 08, 10): 상승 시 악재(부정), 하락 시 호재(긍정)
-    is_neg_fav = name.startswith(('03.', '04.', '05.', '08.', '10.'))
+    # 역방향 지표 (03, 04, 05, 06, 08): 상승 시 악재(부정), 하락 시 호재(긍정)
+    is_neg_fav = name.startswith(('03.', '04.', '05.', '06.', '08.'))
     is_positive = (change < 0) if is_neg_fav else (change > 0)
     abs_chg = abs(change)
 
@@ -738,21 +738,21 @@ def main():
         '03. 미국 국채 10년물 금리(TNX)': '^TNX',
         '04. 미국 달러 지수(USD Index)': 'DX-Y.NYB',
         '05. USD/KRW 환율': 'KRW=X',
-        '06. EWY (MSCI South Korea ETF)': 'EWY',
-        '07. KOSPI200 야간 선물 지수': 'KOSPI200_NIGHT',
-        '08. CBOE VIX': '^VIX',
-        '09. CNN Fear & Greed Index': 'FEAR_GREED',
-        '10. Crude Oil WTI (NYMEX, CL=F)': 'CL=F',
-        '11. 금 (COMEX, GC=F)': 'GC=F',
-        '12. 비트코인(BTC-USD)': 'BTC-USD',
-        '13. 필라델피아 반도체 지수(SOX)': '^SOX',
-        '14. SKHY (SK하이닉스 ADR)': 'SKHY',
-        '15. 엔비디아 (NVDA)': 'NVDA',
-        '16. 마이크론 (MU)': 'MU',
-        '17. 샌디스크 (SNDK)': 'SNDK',
-        '18. 앤트로픽 (ANT)': 'ANT',
-        '19. 오라클 (ORCL)': 'ORCL',
-        '20. 코어위브 (CRWV)': 'CRWV'
+        '06. CBOE VIX': '^VIX',
+        '07. CNN Fear & Greed Index': 'FEAR_GREED',
+        '08. Crude Oil WTI (NYMEX, CL=F)': 'CL=F',
+        '09. 금 (COMEX, GC=F)': 'GC=F',
+        '10. 비트코인(BTC-USD)': 'BTC-USD',
+        '11. 필라델피아 반도체 지수(SOX)': '^SOX',
+        '12. 엔비디아 (NVDA)': 'NVDA',
+        '13. 마이크론 (MU)': 'MU',
+        '14. 샌디스크 (SNDK)': 'SNDK',
+        '15. 앤트로픽 (ANT)': 'ANT',
+        '16. 오라클 (ORCL)': 'ORCL',
+        '17. 코어위브 (CRWV)': 'CRWV',
+        '18. SKHY (SK하이닉스 ADR)': 'SKHY',
+        '19. EWY (MSCI South Korea ETF)': 'EWY',
+        '20. KOSPI200 야간 선물 지수': 'KOSPI200_NIGHT'
     }
 
     data = []
