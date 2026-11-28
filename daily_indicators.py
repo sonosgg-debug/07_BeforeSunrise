@@ -28,72 +28,79 @@ os.makedirs(FONTS_DIR, exist_ok=True)
 # 1. KIS (한국투자증권) API Helper Functions
 # ==============================================================================
 
-def get_kis_access_token():
-    """공용 KIS OAuth 토큰(kis_token.json)을 우선 조회하여 중복 발급을 차단합니다."""
+def get_kis_token_status() -> dict:
+    """공용 KIS 토큰(kis_token.json) 유효성 및 만료 시간 확인 (독자 발급 0건 원칙)"""
     import time
     now_ts = time.time()
 
-    candidates = []
-    # 1. 환경변수 지정 경로
-    if os.getenv("KIS_TOKEN_FILE"):
-        candidates.append(os.getenv("KIS_TOKEN_FILE"))
+    candidates = [
+        os.getenv("KIS_TOKEN_FILE"),
+        "/home/ubuntu/apps/kis_token.json",
+        os.path.join(os.path.dirname(BASE_DIR), "00 API Key", "kis_token.json"),
+        r"D:\AI Investing\00 API Key\kis_token.json",
+        os.path.join(BASE_DIR, "kis_token.json")
+    ]
 
-    # 2. 오라클 서버 1 공용 경로
-    candidates.append("/home/ubuntu/apps/kis_token.json")
-
-    # 3. 로컬 PC 공용 경로
-    parent_dir = os.path.dirname(BASE_DIR)
-    candidates.append(os.path.join(parent_dir, "00 API Key", "kis_token.json"))
-    candidates.append(r"D:\AI Investing\00 API Key\kis_token.json")
-
-    # 4. 앱 내부 로컬 캐시 (폴백)
-    candidates.append(os.path.join(BASE_DIR, "kis_token.json"))
-
-    for token_file in candidates:
-        if os.path.exists(token_file):
+    for c in candidates:
+        if c and os.path.exists(c):
             try:
-                with open(token_file, "r", encoding="utf-8") as f:
-                    cached = json.load(f)
-                if cached.get("access_token") and cached.get("expires_at", 0) > now_ts + 60:
-                    return cached["access_token"]
+                with open(c, "r", encoding="utf-8") as f:
+                    tok = json.load(f)
+                exp = tok.get("expires_at", 0)
+                if tok.get("access_token") and exp > now_ts + 60:
+                    exp_dt = datetime.fromtimestamp(exp)
+                    iss_dt = datetime.fromtimestamp(tok.get("issued_at", exp - 86400))
+                    return {
+                        "connected": True,
+                        "file": c,
+                        "token": tok.get("access_token"),
+                        "expires_at": exp_dt.strftime("%Y-%m-%d %H:%M"),
+                        "issued_at": iss_dt.strftime("%Y-%m-%d %H:%M"),
+                        "expires_at_kst": tok.get("expires_at_kst", exp_dt.strftime("%Y-%m-%d %H:%M")),
+                        "issued_at_kst": tok.get("issued_at_kst", iss_dt.strftime("%Y-%m-%d %H:%M"))
+                    }
             except Exception as e:
-                print(f"[KIS] Token cache read error from {token_file}: {e}")
+                print(f"[KIS] Token cache read error from {c}: {e}")
 
-    # 모든 공용 토큰 파일이 없거나 만료된 경우에만 비상 발급
-    app_key = os.getenv('KIS_APP_KEY')
-    app_secret = os.getenv('KIS_APP_SECRET')
+    return {"connected": False, "file": None, "token": None, "expires_at": None, "issued_at": None}
 
-    if not app_key or not app_secret:
-        print("[KIS] Error: KIS_APP_KEY or KIS_APP_SECRET is not set in .env")
-        return None
 
-    # Issue new token
-    url = 'https://openapi.koreainvestment.com:9443/oauth2/tokenP'
-    body = {
-        'grant_type': 'client_credentials',
-        'appkey': app_key,
-        'appsecret': app_secret
-    }
-    try:
-        r = requests.post(url, json=body, timeout=10)
-        data = r.json()
-        if 'access_token' in data:
-            token = data['access_token']
-            expires_in = data.get('expires_in', 86400)
-            save_file = candidates[1] if os.path.exists("/home/ubuntu/apps") else candidates[2]
-            try:
-                os.makedirs(os.path.dirname(save_file), exist_ok=True)
-                with open(save_file, 'w', encoding='utf-8') as f:
-                    json.dump({'access_token': token, 'expires_at': now_ts + expires_in}, f, indent=2)
-            except Exception as e:
-                print(f"[KIS] Failed to save token cache: {e}")
-            return token
-        else:
-            print(f"[KIS] Token issuance error: {data}")
-            return None
-    except Exception as e:
-        print(f"[KIS] Token request failed: {e}")
-        return None
+def get_kis_access_token() -> str:
+    """공용 KIS OAuth 토큰 문자열 반환 (중복 발급 원천 차단)"""
+    status = get_kis_token_status()
+    if status.get("connected"):
+        return status.get("token")
+    print("[KIS] Warning: No valid shared KIS token found. (Expected from 00 Bookmarks central token manager)")
+    return None
+
+
+def _load_kis_credentials():
+    """KIS AppKey 및 AppSecret 자동 로드 (보조 폴백)"""
+    if not os.getenv("KIS_APP_KEY") or not os.getenv("KIS_APP_SECRET"):
+        parent_dir = Path(BASE_DIR).parent
+        candidates = [
+            parent_dir / "00 API Key" / "한국투자증권 API_kis.txt",
+            Path(r"D:\AI Investing\00 API Key\한국투자증권 API_kis.txt"),
+            parent_dir / "00 API Key" / ".env",
+            Path("/home/ubuntu/apps/.env")
+        ]
+        for c in candidates:
+            if c.exists():
+                try:
+                    with open(c, "r", encoding="utf-8", errors="ignore") as f:
+                        for line in f:
+                            line = line.strip()
+                            if "=" in line and not line.startswith("#"):
+                                k, v = line.split("=", 1)
+                                k, v = k.strip().upper(), v.strip()
+                                if k in ("KIS_APP_KEY", "APP_KEY", "APPKEY"):
+                                    os.environ["KIS_APP_KEY"] = v
+                                elif k in ("KIS_APP_SECRET", "APP_SECRET", "APPSECRET"):
+                                    os.environ["KIS_APP_SECRET"] = v
+                    if os.getenv("KIS_APP_KEY") and os.getenv("KIS_APP_SECRET"):
+                        break
+                except Exception:
+                    pass
 
 
 def get_recent_kospi200_futures_code():
@@ -136,6 +143,7 @@ def get_kospi200_night_futures_kis():
     if not token:
         return None
 
+    _load_kis_credentials()
     app_key = os.getenv('KIS_APP_KEY')
     app_secret = os.getenv('KIS_APP_SECRET')
     code = get_recent_kospi200_futures_code()

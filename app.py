@@ -17,6 +17,8 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from daily_indicators import get_kis_token_status
+
 # Base paths
 CURRENT_DIR = Path(__file__).resolve().parent
 DAILY_DATA_DIR = CURRENT_DIR / "DailyData"
@@ -135,22 +137,37 @@ with st.sidebar:
     st.markdown("<h2 style='margin-bottom: 2px;'>🌅 Before Sunrise</h2>", unsafe_allow_html=True)
     st.caption("글로벌 20대 핵심 투자 지표 대시보드")
 
-    # Unified KIS Badge Card
+    # Dynamic Unified KIS Badge Card
     today_str = datetime.now().strftime("%Y-%m-%d")
-    st.markdown(
-        f"""
+    token_status = get_kis_token_status()
+    if token_status.get("connected"):
+        iss_date = token_status.get("issued_at", "").split()[0] if token_status.get("issued_at") else today_str
+        exp_time = token_status.get("expires_at", "").split()[1] if " " in token_status.get("expires_at", "") else ""
+        sub_text = f"🔑 공용 토큰 정상 활성 (만료: {exp_time})" if exp_time else "🔑 공용 토큰 정상 활성"
+        badge_html = f"""
         <div style="background-color: #1e293b; padding: 12px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 18px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                 <span style="color: #10b981; font-weight: 600; font-size: 0.88rem;">🟢 KIS 공용 토큰 연동</span>
-                <span style="color: #94a3b8; font-size: 0.78rem;">{today_str}</span>
+                <span style="color: #94a3b8; font-size: 0.78rem;">{iss_date}</span>
             </div>
             <div style="color: #38bdf8; font-size: 0.82rem; display: flex; align-items: center; gap: 4px;">
-                🔑 야간선물 시세 수집 활성
+                {sub_text}
             </div>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+        """
+    else:
+        badge_html = f"""
+        <div style="background-color: #1e293b; padding: 12px; border-radius: 8px; border: 1px solid #ef4444; margin-bottom: 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="color: #ef4444; font-weight: 600; font-size: 0.88rem;">🔴 KIS 공용 토큰 미연결</span>
+                <span style="color: #94a3b8; font-size: 0.78rem;">{today_str}</span>
+            </div>
+            <div style="color: #fca5a5; font-size: 0.82rem; display: flex; align-items: center; gap: 4px;">
+                ⚠️ 공용 토큰 파일(kis_token.json) 확인 필요
+            </div>
+        </div>
+        """
+    st.markdown(badge_html, unsafe_allow_html=True)
 
     available_dates = get_available_report_dates()
     selected_png = None
