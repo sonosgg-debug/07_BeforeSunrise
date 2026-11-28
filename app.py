@@ -29,7 +29,7 @@ FAVICON_PATH = CURRENT_DIR / "favicon.png"
 # 1. Page Config (가이드 01 - 2: 파비콘 3단계 우선순위 준수)
 st.set_page_config(
     page_title="Before Sunrise",
-    page_icon=str(FAVICON_PATH) if FAVICON_PATH.exists() else "🌅",
+    page_icon="🌅",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -100,6 +100,43 @@ CUSTOM_CSS = """
         border-color: #38bdf8 !important;
         color: #ffffff !important;
         box-shadow: 0 0 10px rgba(56, 189, 248, 0.25) !important;
+    }
+
+    /* 프라이머리 버튼 (파란색 표준: 가이드 01 - 4(1)) */
+    div.stButton > button[kind="primary"],
+    div[data-testid="stSidebar"] button[kind="primary"],
+    button[data-testid="baseButton-primary"] {
+        background-color: #2563eb !important;
+        border: 1px solid #1d4ed8 !important;
+        color: #ffffff !important;
+        font-weight: 600 !important;
+        border-radius: 6px !important;
+        box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2) !important;
+    }
+    div.stButton > button[kind="primary"]:hover,
+    div[data-testid="stSidebar"] button[kind="primary"]:hover,
+    button[data-testid="baseButton-primary"]:hover {
+        background-color: #1d4ed8 !important;
+        border-color: #38bdf8 !important;
+        color: #ffffff !important;
+    }
+
+    /* 세컨더리 버튼 (가이드 02 - 5 Type A) */
+    div.stButton > button[kind="secondary"],
+    div[data-testid="stSidebar"] button[kind="secondary"],
+    button[data-testid="baseButton-secondary"] {
+        background-color: #334155 !important;
+        border: 1px solid #475569 !important;
+        color: #f8fafc !important;
+        font-weight: 600 !important;
+        border-radius: 6px !important;
+    }
+    div.stButton > button[kind="secondary"]:hover,
+    div[data-testid="stSidebar"] button[kind="secondary"]:hover,
+    button[data-testid="baseButton-secondary"]:hover {
+        background-color: #475569 !important;
+        border-color: #94a3b8 !important;
+        color: #ffffff !important;
     }
 
     /* 지표 메트릭 카드 스타일 */
