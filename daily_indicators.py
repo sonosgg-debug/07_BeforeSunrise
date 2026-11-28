@@ -29,24 +29,43 @@ os.makedirs(FONTS_DIR, exist_ok=True)
 # ==============================================================================
 
 def get_kis_access_token():
-    """Retrieve or issue a KIS OAuth access token (cached for 24 hours)."""
-    token_cache_path = os.path.join(BASE_DIR, 'kis_token.json')
+    """공용 KIS OAuth 토큰(kis_token.json)을 우선 조회하여 중복 발급을 차단합니다."""
+    import time
+    now_ts = time.time()
+
+    candidates = []
+    # 1. 환경변수 지정 경로
+    if os.getenv("KIS_TOKEN_FILE"):
+        candidates.append(os.getenv("KIS_TOKEN_FILE"))
+
+    # 2. 오라클 서버 1 공용 경로
+    candidates.append("/home/ubuntu/apps/kis_token.json")
+
+    # 3. 로컬 PC 공용 경로
+    parent_dir = os.path.dirname(BASE_DIR)
+    candidates.append(os.path.join(parent_dir, "00 API Key", "kis_token.json"))
+    candidates.append(r"D:\AI Investing\00 API Key\kis_token.json")
+
+    # 4. 앱 내부 로컬 캐시 (폴백)
+    candidates.append(os.path.join(BASE_DIR, "kis_token.json"))
+
+    for token_file in candidates:
+        if os.path.exists(token_file):
+            try:
+                with open(token_file, "r", encoding="utf-8") as f:
+                    cached = json.load(f)
+                if cached.get("access_token") and cached.get("expires_at", 0) > now_ts + 60:
+                    return cached["access_token"]
+            except Exception as e:
+                print(f"[KIS] Token cache read error from {token_file}: {e}")
+
+    # 모든 공용 토큰 파일이 없거나 만료된 경우에만 비상 발급
     app_key = os.getenv('KIS_APP_KEY')
     app_secret = os.getenv('KIS_APP_SECRET')
 
     if not app_key or not app_secret:
         print("[KIS] Error: KIS_APP_KEY or KIS_APP_SECRET is not set in .env")
         return None
-
-    # Check cached token
-    if os.path.exists(token_cache_path):
-        try:
-            with open(token_cache_path, 'r', encoding='utf-8') as f:
-                cached = json.load(f)
-                if cached.get('expires_at', 0) > time.time() + 300:
-                    return cached.get('access_token')
-        except Exception as e:
-            print(f"[KIS] Failed to read cached token: {e}")
 
     # Issue new token
     url = 'https://openapi.koreainvestment.com:9443/oauth2/tokenP'
@@ -61,9 +80,11 @@ def get_kis_access_token():
         if 'access_token' in data:
             token = data['access_token']
             expires_in = data.get('expires_in', 86400)
+            save_file = candidates[1] if os.path.exists("/home/ubuntu/apps") else candidates[2]
             try:
-                with open(token_cache_path, 'w', encoding='utf-8') as f:
-                    json.dump({'access_token': token, 'expires_at': time.time() + expires_in}, f)
+                os.makedirs(os.path.dirname(save_file), exist_ok=True)
+                with open(save_file, 'w', encoding='utf-8') as f:
+                    json.dump({'access_token': token, 'expires_at': now_ts + expires_in}, f, indent=2)
             except Exception as e:
                 print(f"[KIS] Failed to save token cache: {e}")
             return token

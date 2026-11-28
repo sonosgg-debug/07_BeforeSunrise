@@ -7,11 +7,17 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR" || exit 1
 
-# Activate Python virtual environment if it exists
-if [ -d "venv" ]; then
+# Determine Python executable
+if [ -f "/home/ubuntu/venv_apps/bin/python3" ]; then
+    PYTHON_BIN="/home/ubuntu/venv_apps/bin/python3"
+elif [ -d "venv" ]; then
     source venv/bin/activate
+    PYTHON_BIN="python3"
 elif [ -d ".venv" ]; then
     source .venv/bin/activate
+    PYTHON_BIN="python3"
+else
+    PYTHON_BIN="python3"
 fi
 
 # When run via Cron, verify New York market close hour (16:xx EST/EDT)
@@ -25,4 +31,4 @@ if [ "$1" == "--cron" ]; then
 fi
 
 # Run daily indicators script and log output
-python3 daily_indicators.py >> execution.log 2>&1
+$PYTHON_BIN daily_indicators.py >> execution.log 2>&1
