@@ -343,24 +343,24 @@ with st.sidebar:
         if st.button("🔍 조회", type="primary", use_container_width=True, help="선택한 일자의 대시보드를 조회합니다."):
             st.rerun()
 
-    # (5) 자동 스케줄 안내
+    # (5) 자동 발송 스케줄 안내 카드
     st.markdown("<hr style='border: 0; height: 1px; background-color: #334155; margin: 16px 0;'>", unsafe_allow_html=True)
     st.markdown(
-        "<div style='font-size: 0.95rem; font-weight: 700; color: #e2e8f0; margin-bottom: 6px;'>⏰ 자동 발송 스케줄</div>",
-        unsafe_allow_html=True
-    )
-    st.markdown(
         """
-        <div style='font-size: 0.82rem; color: #94a3b8; line-height: 1.5;'>
-        • <b>발송 시각</b>: 화~토 아침 06:05 KST<br>
-        • <b>서머타임(EDT)</b>: 아침 05:05 KST 자동 적응<br>
-        • <b>트리거</b>: 뉴욕 정규장 마감(16:00) 5분 후<br>
-        • <b>휴장 감지</b>: 주말 및 미국 공휴일 자동 스킵
+        <div style="background-color: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 12px;">
+            <div style="font-size: 0.85rem; font-weight: 700; color: #38bdf8; margin-bottom: 6px;">
+                ⏰ 텔레그램 자동 발송 스케줄
+            </div>
+            <div style="font-size: 0.78rem; color: #94a3b8; line-height: 1.5;">
+                • <b>발송 시각</b> : 화~토 아침 06:05 KST (서머타임 05:05)<br>
+                • <b>트리거</b> : 뉴욕 정규장 마감(16:00 EST) 5분 후<br>
+                • <b>휴장 감지</b> : 주말 및 미국 공휴일 자동 스킵<br>
+                <span style="color: #10b981;">• 서버 1 백그라운드 크론탭(crontab) 등록 가동 중</span>
+            </div>
         </div>
         """,
         unsafe_allow_html=True
     )
-    st.caption("배포 서버: Oracle Cloud Server 1 (포트 8507)")
 
 
 # ---------------------------------------------------------
