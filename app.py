@@ -2,7 +2,7 @@
 """
 🌅 Before Sunrise - 글로벌 20대 핵심 투자 지표 대시보드
 Streamlit Web Application (Port 8507)
-- 매일 아침 미국 시장 마감 직후 글로벌 핵심 지표 수집 및 텔레그램 발송 봇 통합 뷰어
+- 00 App_AI_Template 공통 디자인 및 UI/UX 표준 가이드 (01, 02, 03) 100% 준수
 - KIS(한국투자증권) 공용 토큰 연동을 통한 KOSPI200 야간선물 실시간/일별 데이터 조회
 """
 
@@ -24,21 +24,85 @@ CURRENT_DIR = Path(__file__).resolve().parent
 DAILY_DATA_DIR = CURRENT_DIR / "DailyData"
 DAILY_DATA_DIR.mkdir(parents=True, exist_ok=True)
 HISTORY_JSON = DAILY_DATA_DIR / "kospif_ngt_history.json"
+FAVICON_PATH = CURRENT_DIR / "favicon.png"
 
+# 1. Page Config (가이드 01 - 2: 파비콘 3단계 우선순위 준수)
 st.set_page_config(
     page_title="Before Sunrise",
-    page_icon="🌅",
+    page_icon=str(FAVICON_PATH) if FAVICON_PATH.exists() else "🌅",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom Dark Theme CSS
+# 2. Standard CSS Theme System (가이드 01, 02 준수)
 CUSTOM_CSS = """
 <style>
-    .reportview-container, .main {
-        background-color: #0b0f19;
-        color: #f1f5f9;
+    /* 상단 고정 헤더 배경 투명화 */
+    header[data-testid="stHeader"] {
+        background: transparent !important;
     }
+
+    /* 화면 상단 패딩 표준화 (2.0rem) */
+    .main .block-container,
+    [data-testid="stMainBlockContainer"] {
+        padding-top: 2.0rem !important;
+        padding-bottom: 3.5rem !important;
+        max-width: 100% !important;
+    }
+
+    /* 사이드바 다크 네이비 테마 & 테두리 */
+    section[data-testid="stSidebar"], [data-testid="stSidebar"] {
+        background-color: #1e293b !important;
+        border-right: 1px solid #334155 !important;
+    }
+
+    /* 사이드바 텍스트 Pure White 강제 */
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3 {
+        color: #f8fafc !important;
+        -webkit-text-fill-color: #f8fafc !important;
+    }
+
+    /* 사이드바 접기/열기 버튼 시인성 보강 */
+    [data-testid="stSidebarCollapseButton"] button,
+    [data-testid="stSidebarCollapsedControl"] button {
+        background-color: #1e293b !important;
+        border: 1.5px solid #38bdf8 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 6px rgba(56, 189, 248, 0.2) !important;
+    }
+    [data-testid="stSidebarCollapseButton"] button *,
+    [data-testid="stSidebarCollapsedControl"] button * {
+        color: #38bdf8 !important;
+        fill: #38bdf8 !important;
+    }
+
+    /* 공통 파일 다운로드 버튼 규격 */
+    div[data-testid="stDownloadButton"] > button,
+    .stDownloadButton > button {
+        background-color: #334155 !important;
+        color: #f8fafc !important;
+        border: 1px solid #475569 !important;
+        border-radius: 6px !important;
+        font-size: 0.875rem !important;
+        font-weight: 500 !important;
+        height: 38px !important;
+        padding: 0 16px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+    div[data-testid="stDownloadButton"] > button:hover,
+    .stDownloadButton > button:hover {
+        background-color: #475569 !important;
+        border-color: #38bdf8 !important;
+        color: #ffffff !important;
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.25) !important;
+    }
+
+    /* 지표 메트릭 카드 스타일 */
     .metric-card {
         background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
         border: 1px solid #334155;
@@ -68,6 +132,8 @@ CUSTOM_CSS = """
         font-size: 0.9rem;
         font-weight: 600;
     }
+
+    /* 탭 헤더 스타일링 */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
     }
@@ -86,6 +152,21 @@ CUSTOM_CSS = """
 </style>
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+
+# Plotly Chart Theme Constants (가이드 03 준수)
+STANDARD_CHART_THEME = {
+    'paper_bgcolor': '#1E293B',    # Slate-800 (외곽 카드 배경)
+    'plot_bgcolor': '#0F172A',     # Slate-900 (내부 딥 블랙 플롯)
+    'text_main': '#F8FAFC',        # 타이틀/헤더 텍스트 (순백색)
+    'text_body': '#E2E8F0',        # 본문 및 축 라벨
+    'text_muted': '#CBD5E1',       # 눈금 수치 (Slate-300)
+    'grid_color': '#334155',       # 그리드 격자선
+    'border_color': '#475569',     # 축 기준선
+    'legend_bg': 'rgba(30, 41, 59, 0.85)',
+    'legend_border': '#334155',
+    'hover_bg': 'rgba(15, 23, 42, 0.9)',
+    'hover_border': '#334155'
+}
 
 
 def get_available_report_dates():
@@ -131,13 +212,26 @@ def run_data_collection():
 
 
 # ---------------------------------------------------------
-# Sidebar
+# 3. Sidebar (가이드 02: 단일 블록 & 표준 헤더 카드 적용)
 # ---------------------------------------------------------
 with st.sidebar:
-    st.markdown("<h2 style='margin-bottom: 2px;'>🌅 Before Sunrise</h2>", unsafe_allow_html=True)
-    st.caption("글로벌 20대 핵심 투자 지표 대시보드")
+    # (1) 최상단 표준 헤더 카드
+    st.markdown(
+        """
+        <div style='padding: 2px 0 12px 0;'>
+            <div style='font-size: 1.25rem; font-weight: 700; color: #f8fafc; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px;'>
+                <span>🌅</span> Before Sunrise
+            </div>
+            <div style='font-size: 0.82rem; color: #94a3b8; margin-top: 4px; line-height: 1.4;'>
+                미국 정규장 마감 후 글로벌 20대 핵심 지표 브리핑
+            </div>
+        </div>
+        <hr style='border: 0; height: 1px; background-color: #334155; margin: 10px 0 16px 0;'>
+        """,
+        unsafe_allow_html=True
+    )
 
-    # Dynamic Unified KIS Badge Card
+    # (2) Dynamic Unified KIS Badge Card
     today_str = datetime.now().strftime("%Y-%m-%d")
     token_status = get_kis_token_status()
     if token_status.get("connected"):
@@ -145,7 +239,7 @@ with st.sidebar:
         exp_time = token_status.get("expires_at", "").split()[1] if " " in token_status.get("expires_at", "") else ""
         sub_text = f"🔑 공용 토큰 정상 활성 (만료: {exp_time})" if exp_time else "🔑 공용 토큰 정상 활성"
         badge_html = f"""
-        <div style="background-color: #1e293b; padding: 12px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 18px;">
+        <div style="background-color: #1e293b; padding: 12px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                 <span style="color: #10b981; font-weight: 600; font-size: 0.88rem;">🟢 KIS 공용 토큰 연동</span>
                 <span style="color: #94a3b8; font-size: 0.78rem;">{iss_date}</span>
@@ -157,7 +251,7 @@ with st.sidebar:
         """
     else:
         badge_html = f"""
-        <div style="background-color: #1e293b; padding: 12px; border-radius: 8px; border: 1px solid #ef4444; margin-bottom: 18px;">
+        <div style="background-color: #1e293b; padding: 12px; border-radius: 8px; border: 1px solid #ef4444; margin-bottom: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                 <span style="color: #ef4444; font-weight: 600; font-size: 0.88rem;">🔴 KIS 공용 토큰 미연결</span>
                 <span style="color: #94a3b8; font-size: 0.78rem;">{today_str}</span>
@@ -169,6 +263,11 @@ with st.sidebar:
         """
     st.markdown(badge_html, unsafe_allow_html=True)
 
+    # (3) 리포트 일자 선택 섹션 (소제목 규격 준수)
+    st.markdown(
+        "<div style='font-size: 0.95rem; font-weight: 700; color: #e2e8f0; margin-bottom: 6px;'>📅 리포트 일자 선택</div>",
+        unsafe_allow_html=True
+    )
     available_dates = get_available_report_dates()
     selected_png = None
     selected_date = None
@@ -176,9 +275,10 @@ with st.sidebar:
     if available_dates:
         date_options = [d[0] for d in available_dates]
         chosen_date = st.selectbox(
-            "📅 리포트 일자 선택",
+            "리포트 일자",
             options=date_options,
             index=0,
+            label_visibility="collapsed",
             help="과거 일자에 생성된 데일리 인디케이터 리포트 이미지를 선택합니다."
         )
         selected_date = chosen_date
@@ -186,44 +286,64 @@ with st.sidebar:
     else:
         st.info("아직 생성된 일일 리포트 이미지가 없습니다.")
 
-    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+    # (4) 구분선 & 하단 액션 버튼 (가이드 02 - 5 Type A: 2열 표준 배치)
+    st.markdown("<hr style='border: 0; height: 1px; background-color: #334155; margin: 16px 0;'>", unsafe_allow_html=True)
+    col_btn1, col_btn2 = st.columns(2)
+    with col_btn1:
+        if st.button("🔄 Update", use_container_width=True, help="데이터를 실시간으로 재수집하고 텔레그램으로 즉시 발송합니다."):
+            with st.spinner("미국 시장 및 KIS 야간선물 시세 수집 중 (약 10~15초 소요)..."):
+                success, stdout, stderr = run_data_collection()
+                if success:
+                    st.toast("성공적으로 데이터 수집 및 텔레그램 발송이 완료되었습니다!", icon="✅")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("데이터 수집 중 오류가 발생했습니다.")
+                    if stderr:
+                        st.code(stderr[-500:])
 
-    # Action Button: Manual Refresh & Telegram Send
-    if st.button("🔄 지금 데이터 수집 & 텔레그램 발송", type="primary", use_container_width=True):
-        with st.spinner("미국 시장 및 KIS 야간선물 시세 수집 중 (약 10~15초 소요)..."):
-            success, stdout, stderr = run_data_collection()
-            if success:
-                st.toast("성공적으로 데이터 수집 및 텔레그램 발송이 완료되었습니다!", icon="✅")
-                time.sleep(1)
-                st.rerun()
-            else:
-                st.error("데이터 수집 중 오류가 발생했습니다.")
-                if stderr:
-                    st.code(stderr[-500:])
+    with col_btn2:
+        if st.button("🔍 조회", type="primary", use_container_width=True, help="선택한 일자의 대시보드를 조회합니다."):
+            st.rerun()
 
-    st.markdown("---")
-    st.markdown("### ⏰ 자동 스케줄 안내")
+    # (5) 자동 스케줄 안내
+    st.markdown("<hr style='border: 0; height: 1px; background-color: #334155; margin: 16px 0;'>", unsafe_allow_html=True)
+    st.markdown(
+        "<div style='font-size: 0.95rem; font-weight: 700; color: #e2e8f0; margin-bottom: 6px;'>⏰ 자동 발송 스케줄</div>",
+        unsafe_allow_html=True
+    )
     st.markdown(
         """
-        - **발송 시각**: 화~토 아침 06:05 KST
-        - **서머타임(EDT)**: 아침 05:05 KST 자동 적응
-        - **트리거**: 뉴욕 증시 마감(16:00) 5분 후 자동 발송
-        - **휴장 감지**: 토/일 주말 및 미국 법정 공휴일 자동 스킵
-        """
+        <div style='font-size: 0.82rem; color: #94a3b8; line-height: 1.5;'>
+        • <b>발송 시각</b>: 화~토 아침 06:05 KST<br>
+        • <b>서머타임(EDT)</b>: 아침 05:05 KST 자동 적응<br>
+        • <b>트리거</b>: 뉴욕 정규장 마감(16:00) 5분 후<br>
+        • <b>휴장 감지</b>: 주말 및 미국 공휴일 자동 스킵
+        </div>
+        """,
+        unsafe_allow_html=True
     )
     st.caption("배포 서버: Oracle Cloud Server 1 (포트 8507)")
 
 
 # ---------------------------------------------------------
-# Main Content View
+# 4. Main Content View (가이드 01 - 3: 메인 타이틀 H1 표준)
 # ---------------------------------------------------------
-st.title("🌅 Before Sunrise")
-st.markdown("매일 아침 개장 전, 미국 정규장 마감 결과 및 **KOSPI200 야간 선물 지수**, 환율, 금리, 반도체 지표를 한눈에 파악합니다.")
+st.markdown(
+    """
+    <div style='text-align: center; padding-top: 0.5rem;'>
+        <h1 style='color: #8AB4F8; font-size: 2.0rem; font-weight: 800; margin-bottom: 6px;'>🌅 Before Sunrise</h1>
+        <p style='color: #94a3b8; font-size: 0.95rem; margin-bottom: 16px;'>매일 아침 개장 전, 미국 정규장 마감 결과 및 KOSPI200 야간 선물, 환율, 금리, 반도체 지표 브리핑</p>
+        <hr style='border: 0; height: 1px; background-color: #334155; margin: 16px 0 24px 0;'>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # Load history
 df_ngt = load_kospi_night_history()
 
-# Header Metric Cards (Latest night futures & indicators if available)
+# Header Metric Cards
 if not df_ngt.empty:
     latest_row = df_ngt.iloc[-1]
     prev_row = df_ngt.iloc[-2] if len(df_ngt) >= 2 else latest_row
@@ -288,63 +408,128 @@ tab1, tab2, tab3 = st.tabs([
 ])
 
 with tab1:
+    # Level 2 Main Sector Title (가이드 01 - 6 준수)
+    st.markdown(
+        f"<div style='font-size: 1.20rem; font-weight: 700; color: #8AB4F8; margin: 18px 0 10px 0; display: flex; align-items: center; gap: 8px;'>"
+        f"<span>📋</span> {selected_date or today_str} 일일 투자 지표 종합 리포트"
+        f"</div>",
+        unsafe_allow_html=True
+    )
+
     if selected_png and os.path.exists(selected_png):
-        st.markdown(f"#### 📋 {selected_date} 일일 투자 지표 종합 리포트")
         st.image(selected_png, use_container_width=True, caption=f"BeforeSunrise - {selected_date}")
 
         with open(selected_png, "rb") as file:
-            btn = st.download_button(
-                label="💾 고화질 원본 이미지 다운로드 (PNG)",
+            st.download_button(
+                label="📥 원본 리포트 이미지 다운로드 (PNG)",
                 data=file,
                 file_name=f"BeforeSunrise_{selected_date}.png",
-                mime="image/png"
+                mime="image/png",
+                use_container_width=True
             )
     else:
-        st.warning("선택된 날짜의 리포트 이미지를 찾을 수 없습니다. 사이드바에서 [🔄 지금 데이터 수집] 버튼을 눌러 새로 생성해 주세요.")
+        st.warning("선택된 날짜의 리포트 이미지를 찾을 수 없습니다. 사이드바에서 [🔄 Update] 버튼을 눌러 새로 생성해 주세요.")
 
 with tab2:
-    st.markdown("#### 🌙 KOSPI200 야간 선물 일별 종가 추이 (최근 60거래일)")
+    # Level 2 Main Sector Title (가이드 01 - 6 준수)
+    st.markdown(
+        "<div style='font-size: 1.20rem; font-weight: 700; color: #8AB4F8; margin: 18px 0 10px 0; display: flex; align-items: center; gap: 8px;'>"
+        "<span>🌙</span> KOSPI200 야간 선물 일별 종가 추이 (최근 60거래일)"
+        "</div>",
+        unsafe_allow_html=True
+    )
+
     if not df_ngt.empty:
-        # Plotly chart if available, otherwise native line chart
         try:
-            import plotly.express as px
-            fig = px.line(
-                df_ngt,
-                x="date",
-                y="price",
-                title="KOSPI200 Night Futures Trend",
-                labels={"date": "날짜", "price": "지수 종가 (Point)"},
-                markers=True
-            )
+            import plotly.graph_objects as go
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=df_ngt["date"],
+                y=df_ngt["price"],
+                mode="lines+markers",
+                name="야간선물 종가",
+                line=dict(color="#38BDF8", width=2.5),
+                marker=dict(size=5, color="#818CF8"),
+                hovertemplate="날짜: %{x|%Y-%m-%d}<br>종가: %{y:.2f} pt<extra></extra>"
+            ))
+
+            # 가이드 03: 고대비 Tailwind Slate 액자형 카드 표준 테마 적용
             fig.update_layout(
                 template="plotly_dark",
-                paper_bgcolor="#0b0f19",
-                plot_bgcolor="#1e293b",
-                font_color="#f8fafc",
-                height=450,
-                margin=dict(l=20, r=20, t=40, b=20)
+                paper_bgcolor=STANDARD_CHART_THEME['paper_bgcolor'],
+                plot_bgcolor=STANDARD_CHART_THEME['plot_bgcolor'],
+                title=dict(
+                    text="<b>KOSPI200 Night Futures Trend</b>",
+                    font=dict(color=STANDARD_CHART_THEME['text_main'], size=15),
+                    x=0.5,
+                    xanchor="center"
+                ),
+                hovermode="x unified",
+                hoverlabel=dict(
+                    bgcolor=STANDARD_CHART_THEME['hover_bg'],
+                    bordercolor=STANDARD_CHART_THEME['hover_border'],
+                    font=dict(color="#FFFFFF", size=12)
+                ),
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="center",
+                    x=0.5,
+                    bgcolor=STANDARD_CHART_THEME['legend_bg'],
+                    bordercolor=STANDARD_CHART_THEME['legend_border'],
+                    borderwidth=1,
+                    font=dict(color=STANDARD_CHART_THEME['text_main'], size=11)
+                ),
+                margin=dict(l=40, r=40, t=75, b=40),
+                height=460
             )
+
+            fig.update_xaxes(
+                gridcolor=STANDARD_CHART_THEME['grid_color'],
+                linecolor=STANDARD_CHART_THEME['border_color'],
+                tickfont=dict(color=STANDARD_CHART_THEME['text_muted'], size=11)
+            )
+            fig.update_yaxes(
+                gridcolor=STANDARD_CHART_THEME['grid_color'],
+                linecolor=STANDARD_CHART_THEME['border_color'],
+                tickfont=dict(color=STANDARD_CHART_THEME['text_muted'], size=11)
+            )
+
             st.plotly_chart(fig, use_container_width=True)
-        except Exception:
+        except Exception as e:
+            st.warning(f"Plotly 렌더링 대체: {e}")
             chart_df = df_ngt.set_index("date")[["price"]]
             st.line_chart(chart_df, height=400)
 
-        # Show Table
-        with st.expander("📋 야간 선물 일별 데이터 테이블 보기"):
+        # Level 3 Sub Sector Title
+        st.markdown(
+            "<div style='font-size: 1.00rem; font-weight: 600; color: #E2E8F0; margin: 14px 0 6px 0; display: flex; align-items: center; gap: 6px;'>"
+            "<span>📅</span> 야간 선물 일별 데이터 테이블"
+            "</div>",
+            unsafe_allow_html=True
+        )
+        with st.expander("📋 일별 데이터 테이블 상세 보기 (펼치기)", expanded=False):
             disp_df = df_ngt.sort_values("date", ascending=False).copy()
             disp_df["date"] = disp_df["date"].dt.strftime("%Y-%m-%d")
+            disp_df.columns = ["거래일자", "야간선물 종가 (pt)"]
             st.dataframe(disp_df, use_container_width=True, hide_index=True)
     else:
         st.info("야간 선물 누적 이력 데이터(kospif_ngt_history.json)가 아직 없습니다.")
 
 with tab3:
+    # Level 2 Main Sector Title
+    st.markdown(
+        "<div style='font-size: 1.20rem; font-weight: 700; color: #8AB4F8; margin: 18px 0 10px 0; display: flex; align-items: center; gap: 8px;'>"
+        "<span>🌐</span> Before Sunrise 20대 핵심 지표 목록 및 모니터링 목적"
+        "</div>",
+        unsafe_allow_html=True
+    )
     st.markdown(
         """
-        ### 🌐 Before Sunrise 20대 핵심 지표 목록
-        
         매일 아침 한국 증시 개장 전, 아래 20대 지표를 통해 글로벌 매크로와 야간 시장의 흐름을 선제적으로 진단합니다.
         
-        1. **01. 미국 S&P 500 지수 (`^GSPC`)** - 미국 대형주 500개 종합 지표
+        1. **01. 미국 S&P 500 지수 (`^GSPC`)** - 미국 대형주 500개 종합 벤치마크
         2. **02. 미국 나스닥 지수 (`^IXIC`)** - 글로벌 기술주 및 혁신 성장주 흐름
         3. **03. 미국 국채 10년물 금리 (`^TNX`)** - 글로벌 무위험 금리 및 밸류에이션 할인율 기준
         4. **04. 미국 달러 지수 (`DX-Y.NYB`)** - 주요 6개국 통화 대비 달러화 강세/약세
@@ -357,7 +542,7 @@ with tab3:
         11. **11. 금 선물 (`GC=F`)** - 안전 자산 선호 및 지정학적 리스크 척도
         12. **12. 비트코인 (`BTC-USD`)** - 글로벌 디지털 유동성 및 위험 자산 선호도
         13. **13. 필라델피아 반도체 지수 (`^SOX`)** - 삼성전자, SK하이닉스 당일 시세의 최우선 벤치마크
-        14. **14. SKHY (SK하이닉스 ADR)** - 미국 장외 거래되는 SK하이닉스 ADR
+        14. **14. SKHY (SK하이닉스 ADR)** - 미국 장외 거래되는 SK하이닉스 ADR 프리미엄
         15. **15. 엔비디아 (`NVDA`)** - AI 반도체 대장주
         16. **16. 마이크론 (`MU`)** - 글로벌 메모리 반도체(DRAM/NAND) 벤치마크
         17. **17. 샌디스크 (`SNDK`)** - 플래시 메모리 섹터 지표
@@ -366,3 +551,12 @@ with tab3:
         20. **20. 코어위브 (`CRWV`)** - 차세대 GPU 클라우드 인프라
         """
     )
+
+# 5. Legal Disclaimer Footer (가이드 01 - 5(2) 준수)
+st.markdown("<hr style='border: 0; height: 1px; background-color: #334155; margin: 30px 0 10px 0;'>", unsafe_allow_html=True)
+st.markdown(
+    "<div style='text-align: center; color: #64748b; font-size: 0.8rem; margin-top: 8px; margin-bottom: 24px; line-height: 1.6;'>"
+    "⚠️ 본 서비스에서 제공하는 모든 정보는 투자 참고용이며, 투자의 최종 결정과 책임은 투자자 본인에게 있습니다."
+    "</div>",
+    unsafe_allow_html=True
+)
